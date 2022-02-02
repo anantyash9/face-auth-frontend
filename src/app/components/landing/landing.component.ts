@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormControl, Validators } from '@angular/forms';
 import { Observable }  from 'rxjs';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-landing',
@@ -13,7 +14,7 @@ export class LandingComponent implements OnInit {
   titleAlert: string = 'This field is required';
   post: any = '';
 
-  constructor(private formBuilder: FormBuilder) { }
+  constructor(private formBuilder: FormBuilder,private router:Router) { }
 
   ngOnInit() {
     this.createForm();
@@ -51,8 +52,9 @@ export class LandingComponent implements OnInit {
   }
 
   onSubmit(post: any) {
+    this.router.navigate(['/face-tracking']);
     console.log(post)
-    this.post = post;
+
   }
 
 }
