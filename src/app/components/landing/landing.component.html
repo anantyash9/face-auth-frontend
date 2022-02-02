@@ -1,0 +1,25 @@
+  
+  <div class="container center" novalidate> 
+    <form [formGroup]="formGroup" (ngSubmit)="onSubmit(formGroup.value)" class="form">
+  
+      <mat-form-field class="form-element">
+        <input matInput placeholder="EventId" formControlName="eventid">
+        <mat-error *ngIf="!eventid.valid && eventid.touched">
+          {{ titleAlert }}
+        </mat-error>
+      </mat-form-field>
+      <br>
+
+      <mat-form-field class="form-element">
+        <input matInput placeholder="CandidateId" formControlName="candidateid">
+        <mat-error *ngIf="!candidateid.valid && candidateid.touched">
+          {{ titleAlert }}
+        </mat-error>
+      </mat-form-field>
+  
+      <div class="form-element">
+        <button mat-raised-button color="primary" type="submit" class="button" [disabled]="!formGroup.valid">Proceed to Fave Validation</button>
+      </div>
+  
+    </form>
+  </div>

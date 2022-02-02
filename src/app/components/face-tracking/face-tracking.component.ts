@@ -18,6 +18,7 @@ NUM_IRIS_KEYPOINTS = 5;
 GREEN = '#00e33d';
 RED = '#FF2C35';
 BLUE = '#157AB3';
+removespinner:Boolean=false;
 stopRendering:any = false;
 public state = {
   backend: 'webgl',
@@ -26,7 +27,7 @@ public state = {
   predictIrises: true,
   renderPointcloud: false
 };
-model: any
+model: any=undefined;
 ctx: any
 videoWidth: any
 videoHeight: any
@@ -135,6 +136,7 @@ async renderPrediction(self:any) {
 
 
   }
+  self.removespinner=true;
   self.rafID = requestAnimationFrame(self.renderPrediction.bind(self,self));
 };
 

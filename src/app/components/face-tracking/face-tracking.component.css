@@ -3,4 +3,13 @@
     vertical-align: top;
     width: 90vw;
     height: 90vh;
+    margin:auto;
   }
+
+  .centered-axis-xy {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%,-50%);
+    text-align: center;
+}
