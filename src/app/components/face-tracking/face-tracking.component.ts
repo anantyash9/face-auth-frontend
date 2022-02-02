@@ -34,6 +34,7 @@ videoHeight: any
 video: any
 canvas: any
 rafID:any
+showbutton:Boolean=false;
 async setupCamera() {
   this.video = document.getElementById('video');
   const canvasContainer:any = document.querySelector('.canvas-wrapper');
@@ -137,9 +138,14 @@ async renderPrediction(self:any) {
 
   }
   self.removespinner=true;
+  self.waitforsometime()
   self.rafID = requestAnimationFrame(self.renderPrediction.bind(self,self));
 };
-
+waitforsometime(){
+  setTimeout(() => {
+    this.showbutton=true;
+  }, 12000);
+}
 distance(a:any, b:any) {
   return Math.sqrt(Math.pow(a[0] - b[0], 2) + Math.pow(a[1] - b[1], 2));
 }
@@ -207,5 +213,8 @@ drawPath(ctx:any, points:any, closePath:any) {
     
     };
     
-
+    webex() {
+      console.log("onSubmit");
+      window.location.href='https://infosys.webex.com/meet/anant.pande';
+  }
 }
