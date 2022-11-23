@@ -5,6 +5,7 @@ import '@tensorflow/tfjs-backend-cpu';
 import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
 import * as tf from '@tensorflow/tfjs-core';
 import {TRIANGULATION} from './triangulation';
+import {LEFT} from './left';
 
 
 @Component({
@@ -70,12 +71,18 @@ async renderPrediction(self:any) {
     predictIrises: self.state.predictIrises
   });
   self.ctx.drawImage(
-      self.video, 0, 0, self.videoWidth, self.videoHeight, 0, 0, self.canvas.width, self.canvas.height);
+      self.video, 0, 0, self.videoWidth, self.videoHeight, 0, 0, self.videoWidth, self.videoHeight);
 
   if (predictions.length > 0) {
-    predictions.forEach((prediction: { scaledMesh: any; }) => {
+    predictions.forEach((prediction: { scaledMesh: any; mesh:any }) => {
       const keypoints = prediction.scaledMesh;
+      //loop over all points in the mesh
+      let sum=0;
+      for (let i = 0; i < prediction.mesh.length; i++) {
+          sum+=self.distance3d(prediction.mesh[i],LEFT[i]);
+      }
 
+      console.log(sum)
       if (self.state.triangulateMesh) {
         self.ctx.strokeStyle = self.GREEN;
         self.ctx.lineWidth = 0.6;
@@ -138,16 +145,13 @@ async renderPrediction(self:any) {
 
   }
   self.removespinner=true;
-  self.waitforsometime()
   self.rafID = requestAnimationFrame(self.renderPrediction.bind(self,self));
 };
-waitforsometime(){
-  setTimeout(() => {
-    this.showbutton=true;
-  }, 12000);
-}
 distance(a:any, b:any) {
   return Math.sqrt(Math.pow(a[0] - b[0], 2) + Math.pow(a[1] - b[1], 2));
+}
+distance3d(a:any, b:any) {
+  return Math.sqrt(Math.pow(a[0] - b[0], 2) + Math.pow(a[1] - b[1], 2)+ Math.pow(a[2] - b[2], 2));
 }
 drawPath(ctx:any, points:any, closePath:any) {
   const region = new Path2D();
