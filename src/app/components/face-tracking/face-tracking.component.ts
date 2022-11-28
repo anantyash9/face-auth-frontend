@@ -5,7 +5,7 @@ import '@tensorflow/tfjs-backend-cpu';
 import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
 import * as tf from '@tensorflow/tfjs-core';
 import {TRIANGULATION} from './triangulation';
-import {LEFT} from './left';
+import {LEFT,RIGHT,UP,DOWN,CENTER} from './pose-coordinates';
 
 
 @Component({
@@ -29,17 +29,27 @@ public state = {
   renderPointcloud: false
 };
 model: any=undefined;
-ctx: any
+  ctx: any
 videoWidth: any
 videoHeight: any
 video: any
-canvas: any
+  canvas: any
+  insCanvas: any
 rafID:any
-showbutton:Boolean=false;
+  showbutton: Boolean = false;
+  pose: any;
+  faceCheckPassed: Boolean = false;
+  pose_array = [LEFT, RIGHT, UP, DOWN, CENTER];
+  pose_names = ["LEFT", "RIGHT", "UP", "DOWN", "CENTER"];
+  selectedpose_indexes: any = [];
+  current_index = 0;
+  face_pose: any = undefined;
+  error_message: any = '';
 async setupCamera() {
   this.video = document.getElementById('video');
   const canvasContainer:any = document.querySelector('.canvas-wrapper');
-  var info=canvasContainer.getBoundingClientRect();
+  var info = canvasContainer.getBoundingClientRect();
+  var pose: any;
 
   const stream = await navigator.mediaDevices.getUserMedia({
     'audio': false,
@@ -47,6 +57,7 @@ async setupCamera() {
       facingMode: 'user',
       // Only setting the video to a specified size in order to accommodate a
       // point cloud, so on mobile devices accept the default size.
+
       width: info.width,
       height:info.height,
     },
@@ -70,19 +81,17 @@ async renderPrediction(self:any) {
     flipHorizontal: false,
     predictIrises: self.state.predictIrises
   });
-  self.ctx.drawImage(
-      self.video, 0, 0, self.videoWidth, self.videoHeight, 0, 0, self.videoWidth, self.videoHeight);
-
+  // self.ctx.drawImage(
+  //     self.video, 0, 0, self.videoWidth, self.videoHeight, 0, 0, self.videoWidth, self.videoHeight);
+  //wipe the canvas
+  self.ctx.clearRect(0, 0, self.videoWidth, self.videoHeight);
   if (predictions.length > 0) {
     predictions.forEach((prediction: { scaledMesh: any; mesh:any }) => {
       const keypoints = prediction.scaledMesh;
-      //loop over all points in the mesh
-      let sum=0;
-      for (let i = 0; i < prediction.mesh.length; i++) {
-          sum+=self.distance3d(prediction.mesh[i],LEFT[i]);
-      }
+      this.pose=prediction.mesh;
+      this.showInstructions(self)
+      this.stateUpdateCheck(prediction)
 
-      console.log(sum)
       if (self.state.triangulateMesh) {
         self.ctx.strokeStyle = self.GREEN;
         self.ctx.lineWidth = 0.6;
@@ -146,7 +155,24 @@ async renderPrediction(self:any) {
   }
   self.removespinner=true;
   self.rafID = requestAnimationFrame(self.renderPrediction.bind(self,self));
-};
+  }
+  showInstructions(self: any) {
+          //loop over all points in the mesh
+
+      // flip the canvas
+      self.ctx.translate(self.videoWidth, 0);
+      self.ctx.scale(-1, 1);
+
+      //display the pose name at bottom center
+      self.ctx.font = "30px Arial";
+      self.ctx.fillStyle = "red";
+      self.ctx.fillText("LOOK " + this.pose_names[this.selectedpose_indexes[this.current_index]], self.videoWidth / 2, self.videoHeight - 20);
+      
+      //flip it back
+      self.ctx.translate(self.videoWidth, 0);
+      self.ctx.scale(-1, 1);
+  }
+;
 distance(a:any, b:any) {
   return Math.sqrt(Math.pow(a[0] - b[0], 2) + Math.pow(a[1] - b[1], 2));
 }
@@ -173,8 +199,67 @@ drawPath(ctx:any, points:any, closePath:any) {
   }
   ngAfterViewInit() {
     this.main()
-  }
+    this.setTestState();
 
+    
+  }
+  setTestState() {
+    //randomly select two distinct index between 0 and 3
+    let index1 = Math.floor(Math.random() * 4);
+    let index2 = Math.floor(Math.random() * 4);
+    while (index1 == index2) {
+      index2 = Math.floor(Math.random() * 4);
+    }
+    //set the pose array to the randomly selected poses
+    this.selectedpose_indexes = [index1, index2];
+    this.current_index=0
+    
+  }
+  stateUpdateCheck(prediction: { mesh: string | any[]; }) {
+    let sum = [0, 0, 0, 0, 0];
+    for (let i = 0; i < prediction.mesh.length; i++) {
+      sum[0] += this.distance3d(prediction.mesh[i], this.pose_array[0][i]);
+      sum[1] += this.distance3d(prediction.mesh[i], this.pose_array[1][i]);
+      sum[2] += this.distance3d(prediction.mesh[i], this.pose_array[2][i]);
+      sum[3] += this.distance3d(prediction.mesh[i], this.pose_array[3][i]);
+      sum[4] += this.distance3d(prediction.mesh[i], this.pose_array[4][i]);
+    }
+    //calculate the minimum sum and the index of the minimum sum
+    let min = sum[0];
+    let min_index = 0;
+    for (let i = 1; i < sum.length; i++) {
+      if (sum[i] < min) {
+        min = sum[i];
+        min_index = i;
+      }
+    }
+    var tempState = this.pose_names[min_index];
+    if (this.face_pose === undefined)
+    {
+      this.face_pose = tempState;
+    }
+    else if (this.face_pose != tempState && tempState != "CENTER")
+    {
+      console.log("face pose changed");
+      console.log(this.face_pose, tempState);
+      this.face_pose = tempState;
+      if (this.pose_names[this.selectedpose_indexes[this.current_index]] != this.face_pose) {
+        //show error message and reset the test
+        this.error_message = "Incorrect Pose";
+        console.log("poes expected",this.pose_names[this.selectedpose_indexes[this.current_index]],"pose detected",this.face_pose);
+      }
+      else {
+        //update the current index
+        this.current_index++;
+        if (this.current_index == 2) {
+          //show success message and proceed to biomechanics capture
+          this.error_message = "Success";
+          console.log("success");
+        }
+      }
+      
+    }
+  }
   ngOnInit(): void {   
   }
     async main() {
@@ -217,8 +302,8 @@ drawPath(ctx:any, points:any, closePath:any) {
     
     };
     
-    webex() {
-      console.log("onSubmit");
-      window.location.href='https://infosys.webex.com/meet/anant.pande';
+    poseCapture() {
+      //log pose
+      console.log(this.pose);
   }
 }
