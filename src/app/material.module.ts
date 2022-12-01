@@ -12,6 +12,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 const MATERIAL_MODULES = [
 MatButtonModule,
 MatCardModule,
@@ -26,7 +27,8 @@ PortalModule,
 BidiModule,
 A11yModule,
 MatCommonModule,
-ObserversModule
+    ObserversModule,
+    MatIconModule
 ];
 @NgModule({
 imports: MATERIAL_MODULES,

@@ -20,9 +20,49 @@
     <mat-spinner></mat-spinner>
     <div style="margin: auto;">Loading Face Detection</div>
 </div>
-<div>
-<mat-card class="example-card">
+<!-- <div> 
+  <mat-card class="example-card">
  <mat-card-title>Capture pose</mat-card-title>   
     <button mat-raised-button color="primary" type="submit" class="button"(click)="poseCapture()">Capture</button></mat-card>
-    
-</div>
+  </mat-card>
+</div> -->
+<div class="centered-axis-xy" *ngIf="error_message=='Incorrect Pose'">
+  <mat-card class="example-card">
+   <mat-card-title>Please follow the instructions properly </mat-card-title>   
+      <button mat-raised-button color="primary" type="submit" class="button" (click)="setTestState()">Ok</button></mat-card>
+    </div>
+
+  <div class="right-axis-xy" *ngIf="look=='RIGHT'">
+    <mat-card class="example-card">
+     <mat-card-title>Look to your right </mat-card-title>   
+       <!-- icon pointing right -->
+        <mat-icon>east</mat-icon>
+      </mat-card>
+    </div>
+    <div class="left-axis-xy" *ngIf="look=='LEFT'">
+      <mat-card class="example-card">
+       <mat-card-title>Look to your left </mat-card-title>   
+         <!-- icon pointing right -->
+          <mat-icon>west</mat-icon>
+        </mat-card>
+      </div>
+
+    <div class="top-axis-xy" *ngIf="look=='UP'">
+      <mat-card class="example-card">
+       <mat-card-title>Look up </mat-card-title>   
+         <!-- icon pointing right -->
+          <mat-icon>north</mat-icon>
+        </mat-card>
+      </div>
+      <div class="bottom-axis-xy" *ngIf="look=='DOWN'">
+        <mat-card class="example-card">
+         <mat-card-title>Look down </mat-card-title>   
+           <!-- icon pointing right -->
+            <mat-icon>south</mat-icon>
+          </mat-card>
+        </div>
+        <div class="bottom-axis-xy" *ngIf="error_message=='Success' && stopRendering==false">
+          <mat-card class="example-card">
+           <mat-card-title>Click to Capture Biometric </mat-card-title>   
+                <button mat-raised-button color="primary" type="submit" class="button" (click)="stopRender()">Capture</button></mat-card>
+          </div>

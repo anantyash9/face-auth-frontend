@@ -5,7 +5,8 @@ import '@tensorflow/tfjs-backend-cpu';
 import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
 import * as tf from '@tensorflow/tfjs-core';
 import {TRIANGULATION} from './triangulation';
-import {LEFT,RIGHT,UP,DOWN,CENTER} from './pose-coordinates';
+import { LEFT, RIGHT, UP, DOWN, CENTER } from './pose-coordinates';
+import { HttpClient } from '@angular/common/http';
 
 
 @Component({
@@ -18,7 +19,8 @@ NUM_KEYPOINTS = 468;
 NUM_IRIS_KEYPOINTS = 5;
 GREEN = '#00e33d';
 RED = '#FF2C35';
-BLUE = '#157AB3';
+  BLUE = '#157AB3';
+  DARK_GREEN = '#00e33d';
 removespinner:Boolean=false;
 stopRendering:any = false;
 public state = {
@@ -45,6 +47,7 @@ rafID:any
   current_index = 0;
   face_pose: any = undefined;
   error_message: any = '';
+  look=''
 async setupCamera() {
   this.video = document.getElementById('video');
   const canvasContainer:any = document.querySelector('.canvas-wrapper');
@@ -81,75 +84,89 @@ async renderPrediction(self:any) {
     flipHorizontal: false,
     predictIrises: self.state.predictIrises
   });
-  // self.ctx.drawImage(
-  //     self.video, 0, 0, self.videoWidth, self.videoHeight, 0, 0, self.videoWidth, self.videoHeight);
-  //wipe the canvas
-  self.ctx.clearRect(0, 0, self.videoWidth, self.videoHeight);
-  if (predictions.length > 0) {
-    predictions.forEach((prediction: { scaledMesh: any; mesh:any }) => {
-      const keypoints = prediction.scaledMesh;
-      this.pose=prediction.mesh;
-      this.showInstructions(self)
-      this.stateUpdateCheck(prediction)
-
-      if (self.state.triangulateMesh) {
-        self.ctx.strokeStyle = self.GREEN;
-        self.ctx.lineWidth = 0.6;
-
-        for (let i = 0; i < TRIANGULATION.length / 3; i++) {
-          const points = [
-            TRIANGULATION[i * 3], TRIANGULATION[i * 3 + 1],
-            TRIANGULATION[i * 3 + 2]
-          ].map(index => keypoints[index]);
-
-          self.drawPath(self.ctx, points, true);
+  if (this.error_message != 'Success') {
+    self.ctx.clearRect(0, 0, self.videoWidth, self.videoHeight);
+    // change the opacity to 40%
+    self.ctx.globalAlpha = 0.6;
+    self.ctx.drawImage(
+      self.video, 0, 0, self.videoWidth, self.videoHeight, 0, 0, self.videoWidth, self.videoHeight);
+    self.ctx.globalAlpha = 1.0;
+  }
+  else {
+    self.ctx.drawImage(
+      self.video, 0, 0, self.videoWidth, self.videoHeight, 0, 0, self.videoWidth, self.videoHeight);
+  }
+  //wipe the canvas if error message is not success
+  if (this.error_message != 'Success') {
+    if (predictions.length > 0) {
+      predictions.forEach((prediction: { scaledMesh: any; mesh: any }) => {
+        const keypoints = prediction.scaledMesh;
+        this.pose = prediction.mesh;
+        this.showInstructions(self)
+        if (this.error_message != 'Success') {
+          this.stateUpdateCheck(prediction)
         }
-      } else {
-        self.ctx.fillStyle = self.BLUE;
+      
 
-        for (let i = 0; i < self.NUM_KEYPOINTS; i++) {
-          const x = keypoints[i][0];
-          const y = keypoints[i][1];
+        if (self.state.triangulateMesh) {
+          self.ctx.strokeStyle = self.DARK_GREEN;
+          self.ctx.lineWidth = 0.6;
 
-          self.ctx.beginPath();
-          self.ctx.arc(x, y, 1 /* radius */, 0, 2 * Math.PI);
-          self.ctx.fill();
-        }
-      }
+          for (let i = 0; i < TRIANGULATION.length / 3; i++) {
+            const points = [
+              TRIANGULATION[i * 3], TRIANGULATION[i * 3 + 1],
+              TRIANGULATION[i * 3 + 2]
+            ].map(index => keypoints[index]);
 
-      if (keypoints.length > self.NUM_KEYPOINTS) {
-        self.ctx.strokeStyle = self.RED;
-        self.ctx.lineWidth = 2;
+            self.drawPath(self.ctx, points, true);
+          }
+        } else {
+          self.ctx.fillStyle = self.BLUE;
 
-        const leftCenter = keypoints[self.NUM_KEYPOINTS];
-        const leftDiameterY = self.distance(
-            keypoints[self.NUM_KEYPOINTS + 4], keypoints[self.NUM_KEYPOINTS + 2]);
-        const leftDiameterX = self.distance(
-            keypoints[self.NUM_KEYPOINTS + 3], keypoints[self.NUM_KEYPOINTS + 1]);
+          for (let i = 0; i < self.NUM_KEYPOINTS; i++) {
+            const x = keypoints[i][0];
+            const y = keypoints[i][1];
 
             self.ctx.beginPath();
-            self.ctx.ellipse(
+            self.ctx.arc(x, y, 1 /* radius */, 0, 2 * Math.PI);
+            self.ctx.fill();
+          }
+        }
+
+        if (keypoints.length > self.NUM_KEYPOINTS) {
+          self.ctx.strokeStyle = self.RED;
+          self.ctx.lineWidth = 2;
+
+          const leftCenter = keypoints[self.NUM_KEYPOINTS];
+          const leftDiameterY = self.distance(
+            keypoints[self.NUM_KEYPOINTS + 4], keypoints[self.NUM_KEYPOINTS + 2]);
+          const leftDiameterX = self.distance(
+            keypoints[self.NUM_KEYPOINTS + 3], keypoints[self.NUM_KEYPOINTS + 1]);
+
+          self.ctx.beginPath();
+          self.ctx.ellipse(
             leftCenter[0], leftCenter[1], leftDiameterX / 2, leftDiameterY / 2,
             0, 0, 2 * Math.PI);
-            self.ctx.stroke();
+          self.ctx.stroke();
 
-        if (keypoints.length > self.NUM_KEYPOINTS + self.NUM_IRIS_KEYPOINTS) {
-          const rightCenter = keypoints[self.NUM_KEYPOINTS + self.NUM_IRIS_KEYPOINTS];
-          const rightDiameterY = self.distance(
+          if (keypoints.length > self.NUM_KEYPOINTS + self.NUM_IRIS_KEYPOINTS) {
+            const rightCenter = keypoints[self.NUM_KEYPOINTS + self.NUM_IRIS_KEYPOINTS];
+            const rightDiameterY = self.distance(
               keypoints[self.NUM_KEYPOINTS + self.NUM_IRIS_KEYPOINTS + 2],
               keypoints[self.NUM_KEYPOINTS + self.NUM_IRIS_KEYPOINTS + 4]);
-          const rightDiameterX = self.distance(
+            const rightDiameterX = self.distance(
               keypoints[self.NUM_KEYPOINTS + self.NUM_IRIS_KEYPOINTS + 3],
               keypoints[self.NUM_KEYPOINTS + self.NUM_IRIS_KEYPOINTS + 1]);
 
-              self.ctx.beginPath();
-              self.ctx.ellipse(
+            self.ctx.beginPath();
+            self.ctx.ellipse(
               rightCenter[0], rightCenter[1], rightDiameterX / 2,
               rightDiameterY / 2, 0, 0, 2 * Math.PI);
-              self.ctx.stroke();
+            self.ctx.stroke();
+          }
         }
-      }
-    });
+      });
+    }
 
 
   }
@@ -157,20 +174,21 @@ async renderPrediction(self:any) {
   self.rafID = requestAnimationFrame(self.renderPrediction.bind(self,self));
   }
   showInstructions(self: any) {
-          //loop over all points in the mesh
+      //     //loop over all points in the mesh
 
-      // flip the canvas
-      self.ctx.translate(self.videoWidth, 0);
-      self.ctx.scale(-1, 1);
+      // // flip the canvas
+      // self.ctx.translate(self.videoWidth, 0);
+      // self.ctx.scale(-1, 1);
 
-      //display the pose name at bottom center
-      self.ctx.font = "30px Arial";
-      self.ctx.fillStyle = "red";
-      self.ctx.fillText("LOOK " + this.pose_names[this.selectedpose_indexes[this.current_index]], self.videoWidth / 2, self.videoHeight - 20);
+      // //display the pose name at bottom center
+      // self.ctx.font = "30px Arial";
+      // self.ctx.fillStyle = "red";
+      // self.ctx.fillText("LOOK " + this.pose_names[this.selectedpose_indexes[this.current_index]], self.videoWidth / 2, self.videoHeight - 20);
       
-      //flip it back
-      self.ctx.translate(self.videoWidth, 0);
-      self.ctx.scale(-1, 1);
+      // //flip it back
+      // self.ctx.translate(self.videoWidth, 0);
+      // self.ctx.scale(-1, 1);
+    this.look=this.pose_names[this.selectedpose_indexes[this.current_index]]
   }
 ;
 distance(a:any, b:any) {
@@ -194,9 +212,8 @@ drawPath(ctx:any, points:any, closePath:any) {
 }
 
 
-  constructor() {
+  constructor(private http: HttpClient) { }
     
-  }
   ngAfterViewInit() {
     this.main()
     this.setTestState();
@@ -212,7 +229,8 @@ drawPath(ctx:any, points:any, closePath:any) {
     }
     //set the pose array to the randomly selected poses
     this.selectedpose_indexes = [index1, index2];
-    this.current_index=0
+    this.current_index = 0
+    this.error_message=''
     
   }
   stateUpdateCheck(prediction: { mesh: string | any[]; }) {
@@ -246,7 +264,8 @@ drawPath(ctx:any, points:any, closePath:any) {
       if (this.pose_names[this.selectedpose_indexes[this.current_index]] != this.face_pose) {
         //show error message and reset the test
         this.error_message = "Incorrect Pose";
-        console.log("poes expected",this.pose_names[this.selectedpose_indexes[this.current_index]],"pose detected",this.face_pose);
+        this.face_pose = "CENTER";
+        console.log("poes expected", this.pose_names[this.selectedpose_indexes[this.current_index]], "pose detected", this.face_pose);
       }
       else {
         //update the current index
@@ -254,6 +273,7 @@ drawPath(ctx:any, points:any, closePath:any) {
         if (this.current_index == 2) {
           //show success message and proceed to biomechanics capture
           this.error_message = "Success";
+          this.look=''
           console.log("success");
         }
       }
@@ -301,7 +321,28 @@ drawPath(ctx:any, points:any, closePath:any) {
           this.renderPrediction(this);
     
     };
+  stopRender() {
+    this.stopRendering = true;
+    // save canvas as image
+    var canvas: any = document.getElementById('output');
+    var dataURL = canvas.toDataURL();
+    //send the image to api endpoint 
+    this.http.post('http://localhost:5000/dataurl', { dataURL }).subscribe((res) => {
+      console.log(res);
+      // close the browser
+      window.close();
+    });
     
+    
+
+    //close the camera
+    // this.video.pause();
+    // this.video.srcObject.getTracks().forEach(function (track: { stop: () => void; }) {
+    //   track.stop();
+    // });
+
+      
+    }
     poseCapture() {
       //log pose
       console.log(this.pose);
